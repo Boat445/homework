@@ -477,6 +477,40 @@ scene.add(ground);
       }
     });
   }
+    // GLTF Loader — ตัวอย่างการโหลดไฟล์ models/scene.gltf
+  const gltfLoader = new THREE.GLTFLoader();
+  gltfLoader.load(
+    'https://github.com/Boat445/homework/blob/main/poramet.glb', // เปลี่ยนเป็นพาธ/URL ของโมเดลของคุณ
+    (gltf) => {
+      const model = gltf.scene || gltf.scenes[0];
+      model.traverse((node) => {
+        if (node.isMesh) {
+          node.castShadow = true;
+          node.receiveShadow = true;
+          // ถ้าวัสดุเป็น MeshStandardMaterial ให้ใช้ envMap ของฉากเพื่อสะท้อน
+          if (node.material && (node.material.isMeshStandardMaterial || node.material.isMeshPhysicalMaterial)) {
+            node.material.envMap = envMap;
+            node.material.needsUpdate = true;
+          }
+        }
+      });
+      // Setup AnimationMixer and play animations (if any)
+      if (gltf.animations && gltf.animations.length) {
+        mixer = new THREE.AnimationMixer(model);
+        // เล่นทุกคลิป — ถ้าต้องการเล่นแค่คลิปแรกใช้ mixer.clipAction(gltf.animations[0]).play();
+        gltf.animations.forEach((clip) => {
+          const action = mixer.clipAction(clip);
+          action.play();
+        });
+      }
+      model.position.set(0, 0, 0);
+      scene.add(model);
+    },
+    undefined,
+    (error) => {
+      console.error('Error loading glTF:', error);
+    }
+  );
 
   function loadGLB(path){
   return new Promise((resolve, reject)=>{
