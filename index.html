@@ -245,7 +245,7 @@
     if(val==='Poramet6') targetPos = scene.getObjectByName('poramet6') ? new THREE.Box3().setFromObject(scene.getObjectByName('poramet6')).getCenter(new THREE.Vector3()) : targetPos;
     if(val==='None') return;
 
-    const duration = 1.0;
+    const duration = 0.5;
     const startPos = camera.position.clone();
     const startLook = controls.target.clone();
     const endPos = targetPos.clone().add(new THREE.Vector3(0, 1.5, 3));
