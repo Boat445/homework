@@ -1,22 +1,19 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <title>Step 03 – MeshStandardMaterial (PBR, no GUI) • three.js r128</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>html,body{height:100%;margin:0} canvas{display:block}</style>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<meta charset="utf-8" />
+<title>Three.js – Finn + Model4 + Jake Cel Shader + Light Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>html,body{height:100%;margin:0} canvas{display:block}</style>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"></script>
 </head>
 <body>
 <script>
-
-
   // Scene / Camera / Renderer
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
-
   const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
   camera.position.set(0, 1.2, 3);
 
@@ -29,172 +26,256 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
   // Lights
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x333333, 0.6);
-  scene.add(hemi);
-
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x333333, 0.6); scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xffffff, 1.0);
-  dir.position.set(3, 5, 2);
-  dir.castShadow = true;
-  scene.add(dir);
+  dir.position.set(3,5,2); dir.castShadow = true; scene.add(dir);
+
+  // GUI for Light Control
+  const gui = new dat.GUI();
+  const lightFolder = gui.addFolder("Light Settings");
+  const lightParams = {
+    hemiColor: hemi.color.getHex(),
+    hemiIntensity: hemi.intensity,
+    dirColor: dir.color.getHex(),
+    dirIntensity: dir.intensity,
+    dirX: dir.position.x,
+    dirY: dir.position.y,
+    dirZ: dir.position.z
+  };
+  lightFolder.addColor(lightParams, 'hemiColor').name("Hemisphere Color").onChange(val=>hemi.color.setHex(val));
+  lightFolder.add(lightParams, 'hemiIntensity',0,2).name("Hemisphere Intensity").onChange(val=>hemi.intensity=val);
+  lightFolder.addColor(lightParams, 'dirColor').name("Directional Color").onChange(val=>dir.color.setHex(val));
+  lightFolder.add(lightParams, 'dirIntensity',0,5).name("Directional Intensity").onChange(val=>dir.intensity=val);
+  lightFolder.add(lightParams, 'dirX',-10,10).name("Dir X").onChange(val=>dir.position.x=val);
+  lightFolder.add(lightParams, 'dirY',0,10).name("Dir Y").onChange(val=>dir.position.y=val);
+  lightFolder.add(lightParams, 'dirZ',-10,10).name("Dir Z").onChange(val=>dir.position.z=val);
+  lightFolder.open();
 
   // Ground
   const ground = new THREE.Mesh(
-    new THREE.PlaneBufferGeometry(10, 10),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, metalness: 0.0 })
+    new THREE.PlaneBufferGeometry(10,10),
+    new THREE.MeshStandardMaterial({color:0xffffff, roughness:0.95, metalness:0.0})
   );
-  ground.rotation.x = -Math.PI/2;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-  // Environment map (cube) สำหรับ reflection ของ PBR
- const cubeUrls = [
-  'https://threejs.org/examples/textures/cube/Bridge2/posx.jpg',
-  'https://threejs.org/examples/textures/cube/Bridge2/negx.jpg',
-  'https://threejs.org/examples/textures/cube/Bridge2/posy.jpg',
-  'https://threejs.org/examples/textures/cube/Bridge2/negy.jpg',
-  'https://threejs.org/examples/textures/cube/Bridge2/posz.jpg',
-  'https://threejs.org/examples/textures/cube/Bridge2/negz.jpg'
-];
-const envMap = new THREE.CubeTextureLoader().load(cubeUrls);
-envMap.encoding = THREE.sRGBEncoding;
-scene.background = envMap;  // <-- ใช้ cube map เป็น background
-scene.environment = envMap; // <-- สำหรับสะท้อน PBR
+  // Environment map
+  const cubeUrls = [
+    'https://threejs.org/examples/textures/cube/Bridge2/posx.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/negx.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/posy.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/negy.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/posz.jpg',
+    'https://threejs.org/examples/textures/cube/Bridge2/negz.jpg'
+  ];
+  const envMap = new THREE.CubeTextureLoader().load(cubeUrls, () => {
+    scene.background = envMap;
+    scene.environment = envMap;
+  });
+  envMap.encoding = THREE.sRGBEncoding;
 
- 
-  // Geometry + PBR Material
-  const geo = new THREE.SphereBufferGeometry(0.65, 64, 64); // ทรงกลมทำให้เห็น reflection ชัด
+  // Sphere with standard PBR
+  const geo = new THREE.SphereBufferGeometry(0.65, 64, 64);
   const mat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,  // สีฐาน
-    metalness: 0.9,  // 0 = non-metal, 1 = metal
-    roughness:  0.1,  // 0 = เรียบเงา, 1 = ด้าน
-    envMap: envMap, // ใส่ที่วัสดุเพื่อใช้ envMapIntensity
-    envMapIntensity:  1.0 // ความเข้มของแสงสะท้อนจาก env map
+    color:0xffffff, metalness:0.9, roughness:0.1, envMap: envMap, envMapIntensity:1.0
   });
   const ball = new THREE.Mesh(geo, mat);
-  ball.position.y = 0.7;
-  ball.castShadow = true;
-  //scene.add(ball);
+  ball.position.y = 0.7; ball.castShadow = true; scene.add(ball);
 
-// Animation helpers
-  const clock = new THREE.Clock();
-  let mixer = null;
+  // Clock & Mixer
+  const clock = new THREE.Clock(); let mixer = null;
 
-  // GLTF Loader — ตัวอย่างการโหลดไฟล์ models/scene.gltf
+  // GLTF Loader
   const gltfLoader = new THREE.GLTFLoader();
-  gltfLoader.load(
-    'https://boat445.github.io/homework/poramet.glb', // เปลี่ยนเป็นพาธ/URL ของโมเดลของคุณ
-    (gltf) => {
-      const model = gltf.scene || gltf.scenes[0];
-      model.traverse((node) => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
-          // ถ้าวัสดุเป็น MeshStandardMaterial ให้ใช้ envMap ของฉากเพื่อสะท้อน
-          if (node.material && (node.material.isMeshStandardMaterial || node.material.isMeshPhysicalMaterial)) {
-            node.material.envMap = envMap;
-            node.material.needsUpdate = true;
-          }
-        }
-      });
-      // Setup AnimationMixer and play animations (if any)
-      if (gltf.animations && gltf.animations.length) {
-        mixer = new THREE.AnimationMixer(model);
-        // เล่นทุกคลิป — ถ้าต้องการเล่นแค่คลิปแรกใช้ mixer.clipAction(gltf.animations[0]).play();
-        gltf.animations.forEach((clip) => {
-          const action = mixer.clipAction(clip);
-          action.play();
-        });
-      }
-      model.position.set(30, 5, 0);
-       model.scale.set(2,2,2);
-      scene.add(model);
-    },
-    undefined,
-    (error) => {
-      console.error('Error loading glTF:', error);
-    }
-  );
 
- 
-  gltfLoader.load(
-    'https://boat445.github.io/homework/home_monster.glb', // เปลี่ยนเป็นพาธ/URL ของโมเดลของคุณ
-    (gltf) => {
-      const model = gltf.scene || gltf.scenes[0];
-      model.traverse((node) => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
-          // ถ้าวัสดุเป็น MeshStandardMaterial ให้ใช้ envMap ของฉากเพื่อสะท้อน
-          if (node.material && (node.material.isMeshStandardMaterial || node.material.isMeshPhysicalMaterial)) {
-            node.material.envMap = envMap;
-            node.material.needsUpdate = true;
-          }
+  // Load poramet
+  gltfLoader.load('https://boat445.github.io/homework/poramet.glb', gltf=>{
+    const model = gltf.scene || gltf.scenes[0];
+    model.traverse(node=>{
+      if(node.isMesh){
+        node.castShadow=true; node.receiveShadow=true;
+        if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
+          node.material.envMap = envMap;
+          node.material.needsUpdate = true;
         }
-      });
-      // Setup AnimationMixer and play animations (if any)
-      if (gltf.animations && gltf.animations.length) {
-        mixer = new THREE.AnimationMixer(model);
-        // เล่นทุกคลิป — ถ้าต้องการเล่นแค่คลิปแรกใช้ mixer.clipAction(gltf.animations[0]).play();
-        gltf.animations.forEach((clip) => {
-          const action = mixer.clipAction(clip);
-          action.play();
-        });
       }
-      model.position.set(0, 0, 0);
-      model.scale.set(0.1,0.1,0.1);
-      scene.add(model);
-    },
-    undefined,
-    (error) => {
-      console.error('Error loading glTF:', error);
-    }
-  );
-  // ...existing code...
-
-// เพิ่ม Cube พร้อม Texture
-const textureLoader = new THREE.TextureLoader();
-textureLoader.load(
-  'https://boat445.github.io/homework/poramet.jpg', // URL ของ texture
-  function (texture) {
-    const cubeGeometry = new THREE.BoxBufferGeometry(20, 30, 1);
-    const cubeMaterial = new THREE.MeshStandardMaterial({
-      map: texture,
-      metalness: 0.3,
-      roughness: 0.7
     });
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    cube.position.set(30, 20, 10); // ตำแหน่งของ cube
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-    scene.add(cube);
-  },
-  undefined,
-  function (err) {
-    console.error('Error loading texture:', err);
-  }
-);
+    model.position.set(30,5,0);
+    model.scale.set(2,2,2);
+    scene.add(model);
+  });
 
-// ...existing code...
+  gltfLoader.load('https://boat445.github.io/homework/finn_the_human.glb', gltf=>{
+  const model = gltf.scene || gltf.scenes[0];
+  model.traverse(node=>{
+    if(node.isMesh){
+      node.castShadow=true; node.receiveShadow=true;
+      if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
+        node.material.onBeforeCompile = shader=>{
+          shader.uniforms.time = { value: 0 };
+
+          // Vertex Shader
+          shader.vertexShader = `
+            uniform float time;
+            ${shader.vertexShader.replace(
+              '#include <begin_vertex>',
+              `
+              vec3 transformed = vec3(position);
+              transformed += normal * 0.05 * sin(time*3.0 + position.y*5.0);
+              `
+            )}
+          `;
+
+          // Fragment Shader (Rainbow Glow)
+          shader.fragmentShader = `
+            uniform float time;
+            ${shader.fragmentShader.replace(
+              '#include <dithering_fragment>',
+              `
+              gl_FragColor.rgb += 0.3 * vec3(
+                0.5 + 0.5*sin(time + gl_FragCoord.x*0.05),
+                0.5 + 0.5*sin(time + gl_FragCoord.y*0.05),
+                0.5 + 0.5*sin(time)
+              );
+              #include <dithering_fragment>
+              `
+            )}
+          `;
+
+          node.userData.shader = shader;
+        };
+      }
+    }
+  });
+
+  if(gltf.animations && gltf.animations.length){
+    mixer = new THREE.AnimationMixer(model);
+    gltf.animations.forEach(clip=>mixer.clipAction(clip).play());
+  }
+
+  model.position.set(-30,10,10);
+  model.scale.set(50,50,50);
+  scene.add(model);
+});
+
+  // Load model4 (ไม่มี Cel Shader)
+  gltfLoader.load('https://boat445.github.io/homework/model4.glb', gltf=>{
+    const model = gltf.scene || gltf.scenes[0];
+    model.traverse(node=>{
+      if(node.isMesh){
+        node.castShadow=true; node.receiveShadow=true;
+        if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
+          node.material.envMap = envMap;
+          node.material.needsUpdate = true;
+        }
+      }
+    });
+    if(gltf.animations && gltf.animations.length){
+      mixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach(clip=>mixer.clipAction(clip).play());
+    }
+    model.position.set(0,0,0);
+    model.scale.set(0.02,0.02,0.02);
+    scene.add(model);
+  });
+
+  // Load Jake (Cel Shader + Vertex Shader)
+gltfLoader.load('https://boat445.github.io/homework/jake_el_perro.glb', gltf=>{
+  const model = gltf.scene || gltf.scenes[0];
+  model.traverse(node=>{
+    if(node.isMesh){
+      node.castShadow=true; node.receiveShadow=true;
+      if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
+        node.material.envMap = envMap;
+        node.material.needsUpdate = true;
+
+        // Cel + Vertex Shader
+        node.material.onBeforeCompile = shader=>{
+          shader.uniforms.time = { value: 0 };
+
+          // Vertex Shader (realtime)
+          shader.vertexShader = `
+            uniform float time;
+            ${shader.vertexShader.replace(
+              '#include <begin_vertex>',
+              `
+              vec3 transformed = vec3(position);
+              transformed += normal * 0.03 * sin(time*4.0 + position.y*10.0);
+              `
+            )}
+          `;
+
+          // Fragment Shader (Cel Shading)
+          shader.fragmentShader = `
+            uniform float time;
+            ${shader.fragmentShader.replace(
+              '#include <dithering_fragment>',
+              `
+              float intensity = dot(normalize(vNormal), vec3(0.0,1.0,0.0));
+              if(intensity > 0.95) intensity = 1.0;
+              else if(intensity > 0.5) intensity = 0.7;
+              else if(intensity > 0.25) intensity = 0.4;
+              else intensity = 0.1;
+              gl_FragColor.rgb *= intensity;
+              #include <dithering_fragment>
+              `
+            )}
+          `;
+
+          node.userData.shader = shader;
+        };
+      }
+    }
+  });
+
+  if(gltf.animations && gltf.animations.length){
+    mixer = new THREE.AnimationMixer(model);
+    gltf.animations.forEach(clip=>mixer.clipAction(clip).play());
+  }
+
+  model.position.set(30,0,10);
+  model.scale.set(3,3,3);
+  scene.add(model);
+});
+
+  // Load texture cube
+  const textureLoader = new THREE.TextureLoader();
+  textureLoader.load('https://boat445.github.io/homework/poramet.jpg', (texture)=>{
+    texture.encoding = THREE.sRGBEncoding;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    const cubeGeo = new THREE.BoxBufferGeometry(20,30,1);
+    const cubeMat = new THREE.MeshStandardMaterial({ map: texture, metalness:0.3, roughness:0.7 });
+    cubeMat.needsUpdate = true;
+    const cube = new THREE.Mesh(cubeGeo, cubeMat);
+    cube.position.set(30,20,-10);
+    cube.castShadow = true; cube.receiveShadow = true;
+    scene.add(cube);
+  });
 
   // Resize
-  addEventListener('resize', ()=>{
+  window.addEventListener('resize', ()=>{
     camera.aspect = innerWidth/innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+    renderer.setSize(innerWidth,innerHeight);
   });
-  
 
   // Animate
-  let t = 0;
-  (function loop(){
-const delta = clock.getDelta();
-    if (mixer) mixer.update(delta); 
+  (function animate(){
+    const delta = clock.getDelta();
+    if(mixer) mixer.update(delta);
 
-    t += 0.01;
     ball.rotation.y += 0.01;
-    dir.position.x = 3 + Math.sin(t) * 1.0; // ขยับไฟนิดหน่อยให้ไฮไลต์เปลี่ยน
-    renderer.render(scene, camera);
-    requestAnimationFrame(loop);
+    dir.position.x = 3 + Math.sin(clock.getElapsedTime())*1.0;
+
+    // Update Finn shader time
+    scene.traverse(obj=>{
+      if(obj.isMesh && obj.userData.shader){
+        obj.userData.shader.uniforms.time.value = clock.getElapsedTime();
+      }
+    });
+
+    renderer.render(scene,camera);
+    requestAnimationFrame(animate);
   })();
 </script>
 </body>
