@@ -88,7 +88,7 @@
   const gltfLoader = new THREE.GLTFLoader();
 
   // Load poramet
-  gltfLoader.load('https://boat445.github.io/homework/poramet.glb', gltf=>{
+  gltfLoader.load('https://boat445.github.io/homework/poramet2.glb', gltf=>{
     const model = gltf.scene || gltf.scenes[0];
     model.traverse(node=>{
       if(node.isMesh){
