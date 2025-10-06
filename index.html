@@ -149,6 +149,32 @@ scene.environment = envMap; // <-- สำหรับสะท้อน PBR
       console.error('Error loading glTF:', error);
     }
   );
+  // ...existing code...
+
+// เพิ่ม Cube พร้อม Texture
+const textureLoader = new THREE.TextureLoader();
+textureLoader.load(
+  'https://boat445.github.io/homework/poramet.jpg', // URL ของ texture
+  function (texture) {
+    const cubeGeometry = new THREE.BoxBufferGeometry(20, 30, 1);
+    const cubeMaterial = new THREE.MeshStandardMaterial({
+      map: texture,
+      metalness: 0.3,
+      roughness: 0.7
+    });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    cube.position.set(30, 20, 10); // ตำแหน่งของ cube
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    scene.add(cube);
+  },
+  undefined,
+  function (err) {
+    console.error('Error loading texture:', err);
+  }
+);
+
+// ...existing code...
 
   // Resize
   addEventListener('resize', ()=>{
