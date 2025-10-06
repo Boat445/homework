@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8" />
-<title>Three.js – Finn + Model4 + Jake Cel Shader + Light Control</title>
+<title>Three.js – Finn + Model4 + Jake + Poramet6 Vertical</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>html,body{height:100%;margin:0} canvas{display:block}</style>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -14,7 +14,7 @@
 <script>
   // Scene / Camera / Renderer
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 200);
   camera.position.set(0, 1.2, 3);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -81,15 +81,15 @@
   const ball = new THREE.Mesh(geo, mat);
   ball.position.y = 0.7; ball.castShadow = true; scene.add(ball);
 
-  // Clock & Mixer
-  const clock = new THREE.Clock(); let mixer = null;
+  const clock = new THREE.Clock(); 
+  let mixer = null;
 
-  // GLTF Loader
   const gltfLoader = new THREE.GLTFLoader();
 
-  // Load poramet
-  gltfLoader.load('https://boat445.github.io/homework/poramet2.glb', gltf=>{
+  // Load Poramet6 (แนวตั้ง)
+  gltfLoader.load('https://boat445.github.io/homework/poramet6.glb', gltf=>{
     const model = gltf.scene || gltf.scenes[0];
+    model.name = 'poramet6';
     model.traverse(node=>{
       if(node.isMesh){
         node.castShadow=true; node.receiveShadow=true;
@@ -99,65 +99,56 @@
         }
       }
     });
-    model.position.set(30,5,0);
-    model.scale.set(2,2,2);
+    model.position.set(30,10,0); // วางพื้น
+    model.rotation.x = 20; // แนวตั้ง
+    model.rotation.y = 0;
+    model.scale.set(0.3,0.3,0.3);
     scene.add(model);
   });
 
+  // Load Finn
   gltfLoader.load('https://boat445.github.io/homework/finn_the_human.glb', gltf=>{
-  const model = gltf.scene || gltf.scenes[0];
-  model.traverse(node=>{
-    if(node.isMesh){
-      node.castShadow=true; node.receiveShadow=true;
-      if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
-        node.material.onBeforeCompile = shader=>{
-          shader.uniforms.time = { value: 0 };
-
-          // Vertex Shader
-          shader.vertexShader = `
-            uniform float time;
-            ${shader.vertexShader.replace(
-              '#include <begin_vertex>',
-              `
-              vec3 transformed = vec3(position);
-              transformed += normal * 0.05 * sin(time*3.0 + position.y*5.0);
-              `
-            )}
-          `;
-
-          // Fragment Shader (Rainbow Glow)
-          shader.fragmentShader = `
-            uniform float time;
-            ${shader.fragmentShader.replace(
-              '#include <dithering_fragment>',
-              `
-              gl_FragColor.rgb += 0.3 * vec3(
-                0.5 + 0.5*sin(time + gl_FragCoord.x*0.05),
-                0.5 + 0.5*sin(time + gl_FragCoord.y*0.05),
-                0.5 + 0.5*sin(time)
-              );
-              #include <dithering_fragment>
-              `
-            )}
-          `;
-
-          node.userData.shader = shader;
-        };
+    const model = gltf.scene || gltf.scenes[0];
+    model.name = 'finn';
+    model.traverse(node=>{
+      if(node.isMesh){
+        node.castShadow=true; node.receiveShadow=true;
+        if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
+          node.material.onBeforeCompile = shader=>{
+            shader.uniforms.time = { value: 0 };
+            shader.vertexShader = `
+              uniform float time;
+              ${shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `vec3 transformed = vec3(position);
+                 transformed += normal * 0.05 * sin(time*3.0 + position.y*5.0);`
+              )}`;
+            shader.fragmentShader = `
+              uniform float time;
+              ${shader.fragmentShader.replace(
+                '#include <dithering_fragment>',
+                `gl_FragColor.rgb += 0.3 * vec3(
+                  0.5 + 0.5*sin(time + gl_FragCoord.x*0.05),
+                  0.5 + 0.5*sin(time + gl_FragCoord.y*0.05),
+                  0.5 + 0.5*sin(time)
+                );
+                #include <dithering_fragment>`
+              )}`;
+            node.userData.shader = shader;
+          };
+        }
       }
+    });
+    if(gltf.animations && gltf.animations.length){
+      mixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach(clip=>mixer.clipAction(clip).play());
     }
+    model.position.set(-30,10,10);
+    model.scale.set(10,10,10);
+    scene.add(model);
   });
 
-  if(gltf.animations && gltf.animations.length){
-    mixer = new THREE.AnimationMixer(model);
-    gltf.animations.forEach(clip=>mixer.clipAction(clip).play());
-  }
-
-  model.position.set(-30,10,10);
-  model.scale.set(50,50,50);
-  scene.add(model);
-});
-
-  // Load model4 (ไม่มี Cel Shader)
+  // Load Model4
   gltfLoader.load('https://boat445.github.io/homework/model4.glb', gltf=>{
     const model = gltf.scene || gltf.scenes[0];
     model.traverse(node=>{
@@ -178,76 +169,62 @@
     scene.add(model);
   });
 
-  // Load Jake (Cel Shader + Vertex Shader)
-gltfLoader.load('https://boat445.github.io/homework/jake_el_perro.glb', gltf=>{
-  const model = gltf.scene || gltf.scenes[0];
-  model.traverse(node=>{
-    if(node.isMesh){
-      node.castShadow=true; node.receiveShadow=true;
-      if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
-        node.material.envMap = envMap;
-        node.material.needsUpdate = true;
-
-        // Cel + Vertex Shader
-        node.material.onBeforeCompile = shader=>{
-          shader.uniforms.time = { value: 0 };
-
-          // Vertex Shader (realtime)
-          shader.vertexShader = `
-            uniform float time;
-            ${shader.vertexShader.replace(
-              '#include <begin_vertex>',
-              `
-              vec3 transformed = vec3(position);
-              transformed += normal * 0.03 * sin(time*4.0 + position.y*10.0);
-              `
-            )}
-          `;
-
-          // Fragment Shader (Cel Shading)
-          shader.fragmentShader = `
-            uniform float time;
-            ${shader.fragmentShader.replace(
-              '#include <dithering_fragment>',
-              `
-              float intensity = dot(normalize(vNormal), vec3(0.0,1.0,0.0));
-              if(intensity > 0.95) intensity = 1.0;
-              else if(intensity > 0.5) intensity = 0.7;
-              else if(intensity > 0.25) intensity = 0.4;
-              else intensity = 0.1;
-              gl_FragColor.rgb *= intensity;
-              #include <dithering_fragment>
-              `
-            )}
-          `;
-
-          node.userData.shader = shader;
-        };
+  // Load Jake
+  gltfLoader.load('https://boat445.github.io/homework/jake_el_perro.glb', gltf=>{
+    const model = gltf.scene || gltf.scenes[0];
+    model.name = 'jake';
+    model.traverse(node=>{
+      if(node.isMesh){
+        node.castShadow=true; node.receiveShadow=true;
+        if(node.material && (node.material.isMeshStandardMaterial||node.material.isMeshPhysicalMaterial)){
+          node.material.envMap = envMap;
+          node.material.needsUpdate = true;
+          node.material.onBeforeCompile = shader=>{
+            shader.uniforms.time = { value: 0 };
+            shader.vertexShader = `
+              uniform float time;
+              ${shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `vec3 transformed = vec3(position);
+                 transformed += normal * 0.03 * sin(time*4.0 + position.y*10.0);`
+              )}`;
+            shader.fragmentShader = `
+              uniform float time;
+              ${shader.fragmentShader.replace(
+                '#include <dithering_fragment>',
+                `float intensity = dot(normalize(vNormal), vec3(0.0,1.0,0.0));
+                 if(intensity > 0.95) intensity = 1.0;
+                 else if(intensity > 0.5) intensity = 0.7;
+                 else if(intensity > 0.25) intensity = 0.4;
+                 else intensity = 0.1;
+                 gl_FragColor.rgb *= intensity;
+                 #include <dithering_fragment>`
+              )}`;
+            node.userData.shader = shader;
+          };
+        }
       }
+    });
+    if(gltf.animations && gltf.animations.length){
+      mixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach(clip=>mixer.clipAction(clip).play());
     }
+    model.position.set(30,0,10);
+    model.scale.set(0.5,0.5,0.5);
+    scene.add(model);
   });
 
-  if(gltf.animations && gltf.animations.length){
-    mixer = new THREE.AnimationMixer(model);
-    gltf.animations.forEach(clip=>mixer.clipAction(clip).play());
-  }
-
-  model.position.set(30,0,10);
-  model.scale.set(3,3,3);
-  scene.add(model);
-});
-
-  // Load texture cube
+  // Poramet texture cube
   const textureLoader = new THREE.TextureLoader();
   textureLoader.load('https://boat445.github.io/homework/poramet.jpg', (texture)=>{
     texture.encoding = THREE.sRGBEncoding;
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    const cubeGeo = new THREE.BoxBufferGeometry(20,30,1);
+    const cubeGeo = new THREE.BoxBufferGeometry(3,3,1);
     const cubeMat = new THREE.MeshStandardMaterial({ map: texture, metalness:0.3, roughness:0.7 });
     cubeMat.needsUpdate = true;
     const cube = new THREE.Mesh(cubeGeo, cubeMat);
-    cube.position.set(30,20,-10);
+    cube.position.set(27,10,0);
     cube.castShadow = true; cube.receiveShadow = true;
     scene.add(cube);
   });
@@ -259,19 +236,44 @@ gltfLoader.load('https://boat445.github.io/homework/jake_el_perro.glb', gltf=>{
     renderer.setSize(innerWidth,innerHeight);
   });
 
+  // Camera Interaction GUI
+  const viewParams = { focus: 'None' };
+  gui.add(viewParams, 'focus', ['None','Finn','Jake','Poramet6']).name('Focus On').onChange(val=>{
+    let targetPos = new THREE.Vector3();
+    if(val==='Finn') targetPos = scene.getObjectByName('finn') ? new THREE.Box3().setFromObject(scene.getObjectByName('finn')).getCenter(new THREE.Vector3()) : targetPos;
+    if(val==='Jake') targetPos = scene.getObjectByName('jake') ? new THREE.Box3().setFromObject(scene.getObjectByName('jake')).getCenter(new THREE.Vector3()) : targetPos;
+    if(val==='Poramet6') targetPos = scene.getObjectByName('poramet6') ? new THREE.Box3().setFromObject(scene.getObjectByName('poramet6')).getCenter(new THREE.Vector3()) : targetPos;
+    if(val==='None') return;
+
+    const duration = 1.0;
+    const startPos = camera.position.clone();
+    const startLook = controls.target.clone();
+    const endPos = targetPos.clone().add(new THREE.Vector3(0, 1.5, 3));
+    let t=0;
+    const animateCam = ()=>{
+      t += clock.getDelta()/duration;
+      if(t<1){
+        camera.position.lerpVectors(startPos,endPos,t);
+        controls.target.lerpVectors(startLook,targetPos,t);
+        requestAnimationFrame(animateCam);
+      } else {
+        camera.position.copy(endPos);
+        controls.target.copy(targetPos);
+      }
+    }
+    animateCam();
+  });
+
   // Animate
   (function animate(){
     const delta = clock.getDelta();
     if(mixer) mixer.update(delta);
-
     ball.rotation.y += 0.01;
     dir.position.x = 3 + Math.sin(clock.getElapsedTime())*1.0;
 
-    // Update Finn shader time
+    // Update shaders
     scene.traverse(obj=>{
-      if(obj.isMesh && obj.userData.shader){
-        obj.userData.shader.uniforms.time.value = clock.getElapsedTime();
-      }
+      if(obj.isMesh && obj.userData.shader) obj.userData.shader.uniforms.time.value = clock.getElapsedTime();
     });
 
     renderer.render(scene,camera);
